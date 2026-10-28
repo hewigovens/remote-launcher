@@ -197,6 +197,26 @@ struct LauncherTests {
         #expect(throws: (any Error).self) { try store.save(Machine(name: "One", host: "one.local")) }
         #expect(try Data(contentsOf: file) == original)
     }
+
+    @Test func duplicateMachineIDsOrEndpointsPreserveSavedFile() throws {
+        let first = Machine(name: "Office", host: "OFFICE.local.")
+        let duplicateID = Machine(id: first.id, name: "Build", host: "build.local")
+        let duplicateEndpoint = Machine(name: "Other Office", host: "office.local")
+        for duplicate in [duplicateID, duplicateEndpoint] {
+            let fixture = try Fixture()
+            defer { fixture.remove() }
+            try fixture.files.write([first, duplicate], to: "machines.json")
+            let file = fixture.files.directory.appendingPathComponent("machines.json")
+            let original = try Data(contentsOf: file)
+
+            let store = MachineStore(files: fixture.files)
+            #expect(store.loadError != nil)
+            #expect(store.machines.isEmpty)
+            #expect(throws: (any Error).self) { try store.remove(first.id) }
+            #expect(throws: (any Error).self) { try store.save(Machine(name: "New", host: "new.local")) }
+            #expect(try Data(contentsOf: file) == original)
+        }
+    }
 }
 
 private struct Fixture {

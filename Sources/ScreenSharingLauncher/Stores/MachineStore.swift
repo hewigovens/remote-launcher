@@ -11,7 +11,14 @@ final class MachineStore {
         self.files = files
         do {
             let loaded = try files.read([Machine].self, from: "machines.json", default: [])
-            machines = try loaded.map { try $0.validated() }
+            let validated = try loaded.map { try $0.validated() }
+            guard Set(validated.map(\.id)).count == validated.count else {
+                throw LauncherError("The saved Mac list contains duplicate identifiers.")
+            }
+            guard Set(validated.map(\.endpointKey)).count == validated.count else {
+                throw LauncherError("The saved Mac list contains duplicate addresses and ports.")
+            }
+            machines = validated
         } catch {
             loadError = "Couldn’t load your Macs. The saved file has been preserved. \(error.localizedDescription)"
         }

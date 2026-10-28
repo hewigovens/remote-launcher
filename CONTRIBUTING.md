@@ -3,6 +3,7 @@
 For installation and usage, see [README.md](README.md). Read [AGENTS.md](AGENTS.md)
 for code ownership, behavior invariants, verification expectations, and the JJ
 repository workflow.
+See [HANDOFF.md](HANDOFF.md) for the latest release handoff and remaining manual checks.
 
 ## Build and run
 

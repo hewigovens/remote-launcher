@@ -39,9 +39,6 @@ brew upgrade --cask hewigovens/tap/remote-launcher
 2. Extract the ZIP and move **Remote Launcher.app** to **Applications**.
 3. Open **Remote Launcher** from Applications.
 
-The prebuilt release is Developer ID signed and notarized. To build from source,
-see [contribution.md](contribution.md#build-and-run).
-
 ## Get started
 
 1. Choose **Add Mac** and enter a name and host name or IP address. Enter the
@@ -102,5 +99,5 @@ being overwritten.
 
 ## Contributing
 
-See [contribution.md](contribution.md) for source builds, tests, implementation
+See [CONTRIBUTING.md](CONTRIBUTING.md) for source builds, tests, implementation
 notes, signing, packaging, and release verification.

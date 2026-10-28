@@ -1,24 +1,142 @@
+<img src="Resources/AppIcon.png" alt="Remote Launcher icon" width="112" align="right">
+
 # Remote Launcher
 
-A native SwiftUI machine list that opens Apple's Screen Sharing app in High Performance mode. Each Mac gets a separate Screen Sharing process, avoiding the viewer's one-High-Performance-session-per-process limit. Click an open Mac again to bring its existing window forward.
+A small native macOS launcher for your remote Macs. Open Apple's built-in Screen
+Sharing in High Performance mode, keep several Macs side by side, and click again
+to bring the same viewer forward—even after restarting the launcher.
 
-## Run
+- A searchable machine list with one-click **Connect** and **Show** actions.
+- A separate Screen Sharing process for each Mac.
+- One or two virtual displays per connection.
+- Saved host names or IPv4/IPv6 addresses, optional usernames, and custom ports.
+- Local storage. Screen Sharing handles passwords and Keychain access.
 
-Requires macOS 14+, Apple silicon, and the Swift 6 toolchain. Both ends of a High Performance connection need compatible Apple silicon Macs and a suitable network.
+## Requirements
+
+Both Macs need Apple silicon and macOS Sonoma 14 or later. Enable Screen Sharing
+or Remote Management on each remote Mac and grant access to the account you use.
+The Macs must be able to communicate over UDP ports 5900–5902; a fast wired
+network is recommended. See [Apple's High Performance requirements](https://support.apple.com/guide/remote-desktop/use-high-performance-screen-sharing-apdf8e09f5a9/mac).
+
+Building from source also requires the Swift 6 toolchain and macOS developer
+command-line tools. There are no third-party package dependencies.
+
+## Build and run
 
 ```sh
+jj git clone --colocate git@github.com:hewigovens/remote-launcher.git
+cd remote-launcher
 ./script/build_and_run.sh
 ```
 
-The script builds and stages `dist/Remote Launcher.app`, signs it, and opens it. If exactly one valid Developer ID Application identity is in the Keychain, it uses that identity with Hardened Runtime and a secure timestamp. If no Developer ID identity is available, local builds fall back to ad hoc signing; multiple identities require an explicit selection. The Codex Run action uses the same script. Use `--build-only` to package without opening, or `--verify` to confirm the launcher process starts.
+The script builds `dist/Remote Launcher.app`, generates its icon, signs it, and
+opens it. If exactly one valid Developer ID Application identity is available in
+Keychain, it uses Hardened Runtime and a secure timestamp. With no Developer ID
+identity, local builds use ad hoc signing. Select an identity explicitly when
+multiple certificates are available:
 
-Add a Mac with a name and host name/IP address, an optional username, and one or two virtual displays. Click its name or **Connect** to start a connection; **Show** brings an existing viewer forward. Use each row’s **…** menu to edit or remove the Mac. Select a row with the arrow keys and press Command-Return to connect or show its window, Command-I to edit, or Command-N to add another Mac. These actions are also available in the File and Connection menus. Removing a saved Mac or quitting the launcher leaves its Screen Sharing window running.
+```sh
+SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)' ./script/build_and_run.sh
+```
 
-High Performance remains the default connection mode. The compact footer shows the machine count and open viewer count; it does not claim that a remote session is authenticated or streaming.
+To force local ad hoc signing, use `SIGNING_IDENTITY=-`.
 
-Screen Sharing handles authentication and Keychain passwords. This app stores no passwords. Machines, generated connection files, and process identities are saved locally in `~/Library/Application Support/dev.hewig.ScreenSharingLauncher/`.
+## Use it
 
-The original bundle identifier and data directory are retained across the rename, so existing machines and running viewer records carry over.
+1. Choose **Add Mac**, then enter a name and host name or IP address. Enter the
+   port separately; omit `vnc://`. A username is optional.
+2. Choose one or two virtual displays and save.
+3. Click the Mac's name or **Connect**. Authenticate in Screen Sharing when asked.
+4. Click **Show** to bring an existing viewer forward. Use the row's **…** menu
+   to edit or remove its saved entry.
+
+High Performance is always the launch default. The footer shows saved-machine
+and open-viewer counts; an open viewer does not guarantee an authenticated or
+streaming connection. Quitting the launcher or removing a saved entry leaves
+Screen Sharing running.
+
+| Shortcut | Action |
+| --- | --- |
+| ⌘N | Add a Mac |
+| ↑ / ↓ | Select a Mac |
+| ⌘Return | Connect or show the selected Mac |
+| ⌘I | Edit the selected Mac |
+
+Commands are also available in the File and Connection menus.
+
+## How connections work
+
+The launcher creates a `.vncloc` document with
+`quality=high&numVirtualDisplays=1` (or `2`) and matching restoration attributes.
+Both query options are necessary to skip Screen Sharing's type chooser. It opens
+the document with `NSWorkspace.OpenConfiguration.createsNewApplicationInstance`,
+then records the viewer's process identity for reuse.
+
+These connection-format options are **undocumented Apple behavior**, validated
+against Screen Sharing 7.0 (776.27) on macOS 27. Future macOS versions may require
+adjustments. No Apple binaries, private frameworks, or Apple preferences are
+modified or linked.
+
+The launcher checks the viewer's PID, start time, executable path, and TCP socket
+before reuse. If a viewer closes while its Connections manager stays open, the
+next click starts a fresh connection. Screen Sharing owns authentication,
+connection errors, and reconnecting disconnected sessions.
+
+Limitations:
+
+- Connections opened outside the launcher are not adopted.
+- Host aliases are separate endpoints; choose one canonical address per Mac.
+- Quit a Mac's viewer before reconnecting with changed connection settings.
+- This enables outgoing viewers to different Macs; it does not bypass the
+  remote Mac's limit on incoming High Performance sessions.
+- The app is currently unsandboxed and intended for Developer ID distribution.
+  A Mac App Store version requires a separate compatibility investigation.
+
+## Local data
+
+The app stores data in:
+
+```text
+~/Library/Application Support/dev.hewig.ScreenSharingLauncher/
+├── machines.json   # saved Macs and preferences
+├── sessions.json   # viewer process identities
+└── Connections/    # generated .vncloc documents
+```
+
+Passwords are never stored by the launcher. Invalid machine files are preserved
+and reported instead of being overwritten. The original bundle identifier and
+data directory are retained so existing installations keep their data.
+
+## Development
+
+```sh
+swift test
+./script/build_and_run.sh --verify
+```
+
+| Command | Purpose |
+| --- | --- |
+| `./script/build_and_run.sh --build-only` | Build, bundle, and sign without opening |
+| `./script/build_and_run.sh --debug` | Launch under LLDB; ad hoc signing by default |
+| `./script/build_and_run.sh --logs` | Run and stream process logs |
+| `./script/build_and_run.sh --telemetry` | Run and stream the app's local unified logs |
+
+The SwiftPM executable is `RemoteLauncher`; source and test modules retain the
+original `ScreenSharingLauncher` name. There is no Xcode project. The build
+script supplies the app bundle metadata and icon that `swift run` alone does not.
+See [AGENTS.md](AGENTS.md) for code ownership, behavior invariants, and verification.
+
+Tests cover validation and URL escaping, connection documents, concurrent clicks,
+viewer reuse and restart recovery, process/socket identity, partial failures,
+saved-list integrity, and persistence. Live video/audio and concurrent High
+Performance streams require remote Macs; unit tests cannot establish them.
+
+On macOS 27, two remote Macs were observed streaming simultaneously, and repeated
+clicks and launcher restarts reused the same viewer PIDs. The list, search,
+row/menu/keyboard actions, editor, and validation were manually checked. Audible
+output, HDR, two-display streaming, VoiceOver, dark appearance, and older macOS
+versions have not been manually verified.
 
 ## Developer ID distribution
 
@@ -28,45 +146,22 @@ Build an optimized, Developer ID-signed ZIP:
 ./script/package_release.sh
 ```
 
-Build, notarize with credentials already stored in Keychain, staple, and verify Gatekeeper acceptance:
+To submit to Apple's notary service, use a `notarytool` credential profile already
+stored in Keychain:
 
 ```sh
-NOTARY_PROFILE=notarytool ./script/package_release.sh --notarize
+NOTARY_PROFILE=remote-launcher ./script/package_release.sh --notarize
 ```
 
-Artifacts, notarization responses, the notary log, and the archive's SHA-256 are written under `dist/release/`. The notarized archive is recreated after stapling so the ticket ships inside the ZIP. This submits the app privately to Apple's notary service; it does not publish a release or submit it to the Mac App Store.
-
-`SIGNING_IDENTITY` accepts a certificate name or SHA-1 when automatic selection is ambiguous. `SIGNING_IDENTITY=- ./script/build_and_run.sh` explicitly uses ad hoc signing for local development; `--debug` also defaults to ad hoc signing so LLDB can attach. Distribution builds refuse ad hoc signatures. The identity is team-wide; this app needs no separate certificate or provisioning profile for its current capabilities. Keep signing private keys and notarization credentials in Keychain, outside this repository.
-
-The app is currently unsandboxed. A Mac App Store version would need a separate sandbox compatibility investigation, especially around inspecting another process's identity/sockets and activating separate Screen Sharing instances. Its undocumented Screen Sharing URL options also need review and compatibility validation. Developer ID signing is the supported distribution path implemented here; it is different from Mac App Store distribution signing. See [Apple's Mac App Store requirements](https://developer.apple.com/app-store/review/guidelines/#hardware-compatibility) and [notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
+The script validates signing, submits and downloads the notary log, staples and
+validates the ticket, checks Gatekeeper, then recreates the ZIP and its SHA-256.
+Artifacts and notarization responses are written to `dist/release/`. Distribution
+builds refuse ad hoc signatures. Keep signing private keys and credentials in
+Keychain; see [Apple's notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
+This workflow does not create a GitHub release or submit to the Mac App Store.
 
 ## Icon
 
-The teal display and launch arrow are generated with built-in ImageGen. The source is [Resources/AppIcon.png](Resources/AppIcon.png), with the [original prompt](Resources/AppIcon.prompt.txt) alongside it. The build script creates a complete macOS `.icns` icon with standard and Retina sizes from 16px through 1024px; update the source PNG to rebuild it.
-
-## Connection behavior
-
-- A `.vncloc` document requests High Performance using the URL query `quality=high&numVirtualDisplays=1` (or `2` displays). Both options matter: a display count without `quality=high` is treated as Standard. The query skips Apple's sharing-type chooser; `restorationAttributes.displayType` alone does not. The document also carries the matching display type and enables dynamic resolution for one display. These are **undocumented Apple connection-format conventions**, checked against a native export from Screen Sharing 7.0 (776.27) on macOS 27; future versions may change them.
-- `NSWorkspace.OpenConfiguration.createsNewApplicationInstance` launches one viewer per endpoint. No Apple binaries, private frameworks, or Apple preferences are modified or linked.
-- While a launch is pending, further clicks do nothing. Afterwards, clicks activate the recorded process, with a standard PID-targeted reopen event if AppKit declines activation. The kernel's process ID, start time, and executable path are checked before reuse, including after restarting the launcher. This avoids AppKit's cached application state when multiple viewers share a bundle identifier.
-- A viewer's TCP connection is checked after a short startup grace period. If its screen window closes while the Connections manager stays open, the next click starts a fresh connection instead of focusing an idle manager.
-- The UI offers **Show** when a viewer window is already open. Screen Sharing owns connection errors, authentication, and reconnecting a disconnected session. Quit that viewer to start a fresh connection with changed settings.
-- Connections opened outside the launcher are not adopted: Apple's app provides no supported session-discovery API. Host aliases are separate endpoints; use one canonical address for each Mac. Duplicate saved host/port pairs are rejected.
-- This workaround enables outgoing connections to different Macs. It does not remove Apple's limit on simultaneous High Performance sessions into the same host.
-
-## Verify
-
-```sh
-swift test
-./script/build_and_run.sh --verify
-```
-
-Tests cover URL validation/escaping, connection-file display settings, concurrent click deduplication, reuse across launcher restarts, exited processes, launch/write failures, and machine-list persistence. Real video, audio, and concurrent High Performance streams require remote Macs and credentials; unit tests do not establish those behaviors.
-
-On 2026-10-28, the app was built and its machine list and add/edit/remove flows inspected on macOS 27. Two remote Macs simultaneously started AVC video/audio streams and received their first video frames, with the sharing-type chooser skipped. Repeated clicks and restarting the launcher preserved the same two viewer PIDs. Audio stream startup was observed in logs; audible output, HDR, two virtual displays per host, and older client macOS versions were not tested.
-
-Developer ID distribution was also validated: the optimized app was accepted by Apple's notary service with no issues, stapled, and accepted by Gatekeeper. The app extracted from the final ZIP passed the same checks. All 11 tests passed in release mode, and the signed/notarized app reused both existing viewers, including the standard reopen-event fallback, without additional Hardened Runtime entitlements.
-
-The UI polish pass was checked in the running app: row actions, File/Connection menu commands, keyboard selection and editing, search with no results, initial editor focus, disabled empty submissions, and inline port validation. Both existing viewer PIDs were preserved. Dark appearance, VoiceOver, and older macOS versions were not manually tested in this pass.
-
-References: [Apple High Performance requirements](https://support.apple.com/guide/remote-desktop/use-high-performance-screen-sharing-apdf8e09f5a9/mac), [per-process limit analysis](https://edx.sh/posts/multiple-sessions-macos-high-performance-screen-sharing/), [NSWorkspace launch configuration](https://developer.apple.com/documentation/appkit/nsworkspace/openconfiguration).
+The teal display and launch arrow were generated with ImageGen. The source
+[PNG](Resources/AppIcon.png) and [original prompt](Resources/AppIcon.prompt.txt)
+are included. The build script generates the standard and Retina `.icns` sizes.

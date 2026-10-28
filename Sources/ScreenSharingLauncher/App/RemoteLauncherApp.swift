@@ -7,6 +7,7 @@ struct RemoteLauncherApp: App {
     @State private var store = MachineStore()
     @State private var connections = SessionCoordinator()
     @State private var discovery = MachineDiscovery()
+    @AppStorage("showInMenuBar") private var showInMenuBar = true
 
     var body: some Scene {
         WindowGroup("Remote Launcher", id: "machines", for: String.self) { _ in
@@ -15,8 +16,13 @@ struct RemoteLauncherApp: App {
         .defaultSize(width: 600, height: 360)
         .commands { LauncherCommands() }
 
-        MenuBarExtra("Remote Launcher", systemImage: "rectangle.connected.to.line.below") {
-            LauncherMenu()
+        Settings {
+            LauncherSettingsView()
+        }
+        .windowResizability(.contentSize)
+
+        MenuBarExtra("Remote Launcher", systemImage: "rectangle.connected.to.line.below", isInserted: $showInMenuBar) {
+            LauncherMenu(store: store, connections: connections)
         }
         .menuBarExtraStyle(.menu)
     }

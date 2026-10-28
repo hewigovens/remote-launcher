@@ -53,9 +53,12 @@ open-viewer counts; an open viewer does not guarantee an authenticated or
 streaming connection. Quitting the launcher or removing a saved entry leaves
 Screen Sharing running.
 
-Closing the main window keeps the launcher available in the Dock and menu bar.
-Click its Dock icon or choose **Open Remote Launcher** from its menu bar icon to
-show the machine list again.
+The menu bar lists your saved Macs. Select a Mac to connect or bring its existing
+viewer forward, or choose **Open Remote Launcher** to show the main window.
+
+Open **Remote Launcher > Settings…** (⌘,) to turn **Show in menu bar** on or off.
+Your choice is saved between launches. The Dock stays available when the menu bar
+icon is hidden, and closing the main window leaves the app running.
 
 | Shortcut | Action |
 | --- | --- |

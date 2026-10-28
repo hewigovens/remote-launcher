@@ -2,7 +2,7 @@
 
 Remote Launcher is a macOS SwiftUI app built with SwiftPM. Read [README.md](README.md)
 for installation, usage, requirements, and connection limits. See
-[contribution.md](contribution.md) for builds, tests, implementation notes,
+[CONTRIBUTING.md](CONTRIBUTING.md) for builds, tests, implementation notes,
 signing, and distribution.
 There is no Xcode project or third-party package dependency.
 
@@ -19,7 +19,7 @@ swift test
 The build script creates a real app bundle; `swift run` alone does not exercise
 bundle metadata, icons, signing, or normal app launching. It restarts only the
 launcher in run modes and leaves Screen Sharing viewers running. `--build-only`
-does not stop or launch applications. See [contribution.md](contribution.md#local-signing)
+does not stop or launch applications. See [CONTRIBUTING.md](CONTRIBUTING.md#local-signing)
 for signing and debug modes.
 
 ## Ownership
@@ -66,7 +66,12 @@ The executable is `RemoteLauncher`; the original Swift module name remains
 - Reopen the main window through SwiftUI's scene action with the fixed `main`
   presentation value, from both the Dock and menu bar. A closed window may have
   been released; enumerating `NSApp.windows` cannot recreate it. Keep the Dock
-  and menu bar available when the main window closes.
+  available when the main window closes, and keep menu bar visibility bound to
+  the persistent `showInMenuBar` preference (on by default). Settings must remain
+  reachable through the app menu when the menu bar item is hidden.
+- Menu bar machines share `MachineStore` and `SessionCoordinator` with the main
+  window. Reuse the same connection path and opening guard. Bring connection
+  errors back to the main window when a menu action fails while it is closed.
 - Model discovery uses Bonjour and matches resolved addresses and ports, never
   machine names. Cache last-known model identifiers, respect manual type
   overrides, and clear detected metadata when an endpoint changes. An editor

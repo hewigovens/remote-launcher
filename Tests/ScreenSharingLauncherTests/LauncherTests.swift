@@ -1,10 +1,71 @@
 import Foundation
+import AppKit
 import Darwin
 import Testing
 @testable import ScreenSharingLauncher
 
 @Suite @MainActor
 struct LauncherTests {
+    @Test func dockReopenRequestsTheLauncherScene() {
+        let delegate = AppDelegate()
+        var requests = 0
+        delegate.openMainWindow = { requests += 1 }
+        #expect(delegate.applicationShouldHandleReopen(NSApplication.shared, hasVisibleWindows: false))
+        #expect(requests == 1)
+        // An About panel can be visible even when the main window is closed.
+        #expect(delegate.applicationShouldHandleReopen(NSApplication.shared, hasVisibleWindows: true))
+        #expect(requests == 2)
+    }
+
+    @Test func machineIconsMigrateOldFilesAndRespectOverrides() throws {
+        let data = Data("""
+        [{"id":"00000000-0000-0000-0000-000000000001","name":"Office","host":"office.local","username":"","port":5900,"virtualDisplays":1}]
+        """.utf8)
+        var machine = try #require(JSONDecoder().decode([Machine].self, from: data).first)
+        #expect(machine.modelIdentifier == nil)
+        #expect(machine.kindOverride == nil)
+        #expect(machine.kind == .mac)
+        machine.modelIdentifier = "Mac14,14"
+        #expect(machine.kind == .macStudio)
+        machine.kindOverride = .macBook
+        #expect(machine.kind == .macBook)
+        let restored = try JSONDecoder().decode(Machine.self, from: JSONEncoder().encode(machine))
+        #expect(restored == machine)
+        #expect(MachineKind(modelIdentifier: "Mac16,11") == .macMini)
+        #expect(MachineKind(modelIdentifier: "MacBookPro18,3") == .macBook)
+        #expect(MachineKind(modelIdentifier: "Mac14,2") == .macBook)
+        #expect(MachineKind(modelIdentifier: "Mac99,1") == .mac)
+    }
+
+    @Test func discoveryMatchesHostsAndPortsWithoutGuessingNames() {
+        let discovered = DiscoveredMac(hosts: ["office.local.", "192.0.2.10", "2001:db8::1"], port: 5900, modelIdentifier: "Mac16,11")
+        #expect(discovered.matches(Machine(name: "Any Name", host: "OFFICE.local")))
+        #expect(discovered.matches(Machine(name: "Other", host: "192.0.2.10")))
+        #expect(discovered.matches(Machine(name: "IPv6", host: "2001:0db8:0000:0000:0000:0000:0000:0001")))
+        #expect(!discovered.matches(Machine(name: "Office", host: "other.local")))
+        #expect(!discovered.matches(Machine(name: "Forwarded", host: "192.0.2.10", port: 5901)))
+    }
+
+    @Test func discoveredModelsSurviveEditingAndResetWhenAddressChanges() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let store = MachineStore(files: fixture.files)
+        var editorSnapshot = Machine(name: "Office", host: "office.local")
+        try store.save(editorSnapshot)
+        try store.applyDiscovery(DiscoveredMac(hosts: ["office.local"], port: 5900, modelIdentifier: "Mac14,14"))
+        editorSnapshot.name = "Work"
+        editorSnapshot.kindOverride = .macMini
+        try store.save(editorSnapshot)
+        let restored = MachineStore(files: fixture.files)
+        #expect(restored.machines.first?.modelIdentifier == "Mac14,14")
+        #expect(restored.machines.first?.kind == .macMini)
+        var edited = try #require(restored.machines.first)
+        edited.host = "other.local"
+        try restored.save(edited)
+        #expect(restored.machines.first?.modelIdentifier == nil)
+        #expect(restored.machines.first?.kindOverride == .macMini)
+    }
+
     @Test func closedTCPConnectionIsNotMistakenForAnOpenViewer() throws {
         let server = socket(AF_INET, SOCK_STREAM, 0)
         defer { close(server) }

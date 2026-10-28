@@ -26,12 +26,15 @@ final class MachineStore {
 
     func save(_ machine: Machine) throws {
         if let loadError { throw LauncherError(loadError) }
-        let machine = try machine.validated()
+        var machine = try machine.validated()
         guard !machines.contains(where: { $0.id != machine.id && $0.endpointKey == machine.endpointKey }) else {
             throw LauncherError("This address and port are already in your list.")
         }
         var updated = machines
         if let index = updated.firstIndex(where: { $0.id == machine.id }) {
+            // The editor can predate a discovery result. Keep metadata owned by
+            // discovery for the same endpoint; never carry it to another host.
+            machine.modelIdentifier = updated[index].endpointKey == machine.endpointKey ? updated[index].modelIdentifier : nil
             updated[index] = machine
         } else {
             updated.append(machine)
@@ -42,6 +45,18 @@ final class MachineStore {
     func remove(_ id: Machine.ID) throws {
         if let loadError { throw LauncherError(loadError) }
         try persist(machines.filter { $0.id != id })
+    }
+
+    func applyDiscovery(_ discovered: DiscoveredMac) throws {
+        guard loadError == nil else { return }
+        var updated = machines
+        var changed = false
+        for index in updated.indices where discovered.matches(updated[index]) {
+            guard updated[index].modelIdentifier != discovered.modelIdentifier else { continue }
+            updated[index].modelIdentifier = discovered.modelIdentifier
+            changed = true
+        }
+        if changed { try persist(updated) }
     }
 
     private func persist(_ updated: [Machine]) throws {

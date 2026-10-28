@@ -10,6 +10,8 @@ to bring the same viewer forward—even after restarting the launcher.
 - A separate Screen Sharing process for each Mac.
 - One or two virtual displays per connection.
 - Saved host names or IPv4/IPv6 addresses, optional usernames, and custom ports.
+- Hardware-specific icons detected over Bonjour, with a manual Mac type choice.
+- Dock reopening and a menu bar shortcut to the main window.
 - Local storage. Screen Sharing handles passwords and Keychain access.
 
 ## Requirements
@@ -64,6 +66,22 @@ Screen Sharing running.
 | ⌘I | Edit the selected Mac |
 
 Commands are also available in the File and Connection menus.
+
+Closing the main window keeps the launcher available in the Dock and menu bar.
+Click its Dock icon or choose **Open Remote Launcher** from its menu bar icon to
+show the machine list again. Repeated requests reuse the main window.
+
+### Machine icons
+
+**Mac type: Automatic** uses Bonjour on the local network to learn the hardware
+model of a saved Mac and show a MacBook, Mac mini, Mac Studio, iMac, or Mac Pro
+icon. It matches resolved host addresses and ports, rather than guessing from
+the name. Last-known models are saved so icons remain available offline.
+
+Allow Local Network access if macOS requests it for discovery. Discovery does
+not require SSH, passwords, or an extra service on the remote Mac. If Bonjour is
+unavailable across a VPN/subnet, or a model is unknown, choose **Mac type** in the
+editor to set an icon manually. Automatic falls back to a generic Mac icon.
 
 ## How connections work
 
@@ -131,6 +149,15 @@ Tests cover validation and URL escaping, connection documents, concurrent clicks
 viewer reuse and restart recovery, process/socket identity, partial failures,
 saved-list integrity, and persistence. Live video/audio and concurrent High
 Performance streams require remote Macs; unit tests cannot establish them.
+
+Hardware-model discovery has also been verified against two local Macs using
+Bonjour's `_rfb._tcp` service and `_device-info._tcp` TXT records. The model
+mapping follows Apple's identification pages for [Mac mini](https://support.apple.com/en-us/102852),
+[Mac Studio](https://support.apple.com/en-us/102231),
+[MacBook Pro](https://support.apple.com/en-us/108052),
+[MacBook Air](https://support.apple.com/en-us/102869),
+[iMac](https://support.apple.com/en-us/108054), and
+[Mac Pro](https://support.apple.com/en-us/102887).
 
 On macOS 27, two remote Macs were observed streaming simultaneously, and repeated
 clicks and launcher restarts reused the same viewer PIDs. The list, search,

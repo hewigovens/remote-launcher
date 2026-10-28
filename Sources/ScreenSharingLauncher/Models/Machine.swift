@@ -8,8 +8,12 @@ struct Machine: Identifiable, Codable, Equatable, Sendable {
     var username = ""
     var port = 5900
     var virtualDisplays = 1
+    var modelIdentifier: String?
+    var kindOverride: MachineKind?
 
-    var endpointKey: String { "\(host.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ".")))|\(port)" }
+    var normalizedHost: String { host.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ".")) }
+    var endpointKey: String { "\(normalizedHost)|\(port)" }
+    var kind: MachineKind { kindOverride ?? MachineKind(modelIdentifier: modelIdentifier ?? "") }
     var address: String {
         let server = host.contains(":") ? "[\(host)]" : host
         return port == 5900 ? server : "\(server):\(port)"

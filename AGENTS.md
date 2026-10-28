@@ -60,6 +60,14 @@ The executable is `RemoteLauncher`; the original Swift module name remains
 - Preserve macOS 14 support, system colors, keyboard selection/shortcuts, and
   accessible row actions. Keep selection and editor state in the view; route
   menu commands through focused scene actions.
+- Reopen the main window through SwiftUI's scene action with the fixed `main`
+  presentation value, from both the Dock and menu bar. A closed window may have
+  been released; enumerating `NSApp.windows` cannot recreate it. Keep the Dock
+  and menu bar available when the main window closes.
+- Model discovery uses Bonjour and matches resolved addresses and ports, never
+  machine names. Cache last-known model identifiers, respect manual type
+  overrides, and clear detected metadata when an endpoint changes. An editor
+  opened before a discovery result must not overwrite that newer metadata.
 
 ## Verification
 

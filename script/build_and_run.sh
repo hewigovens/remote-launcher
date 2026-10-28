@@ -88,6 +88,11 @@ cat >"$APP_BUNDLE/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSMultipleInstancesProhibited</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
+  <key>NSLocalNetworkUsageDescription</key><string>Find your saved Macs on the local network to show their hardware icons.</string>
+  <key>NSBonjourServices</key><array>
+    <string>_rfb._tcp</string>
+    <string>_device-info._tcp</string>
+  </array>
 </dict></plist>
 PLIST
 if [[ "$SIGNING_IDENTITY" == - ]]; then

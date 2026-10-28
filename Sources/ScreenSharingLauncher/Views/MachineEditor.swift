@@ -20,6 +20,13 @@ struct MachineEditor: View {
             Form {
                 TextField("Name", text: $machine.name, prompt: Text("Office Mac"))
                     .focused($nameFocused)
+                Picker("Mac type", selection: $machine.kindOverride) {
+                    Text("Automatic").tag(nil as MachineKind?)
+                    ForEach(MachineKind.allCases) { kind in
+                        Label(kind.title, systemImage: kind.symbolName).tag(Optional(kind))
+                    }
+                }
+                .help("Detect the hardware model using Bonjour, or choose an icon manually")
                 TextField("Address", text: $machine.host, prompt: Text("mac-studio.local"))
                     .help("A host name, IPv4 address, or IPv6 address")
                 TextField("Username", text: $machine.username, prompt: Text("Ask when connecting"))
@@ -34,6 +41,9 @@ struct MachineEditor: View {
             .formStyle(.columns)
             .textFieldStyle(.roundedBorder)
             VStack(alignment: .leading, spacing: 4) {
+                if let model = machine.modelIdentifier {
+                    Text("Detected: \(MachineKind(modelIdentifier: model).title) (\(model))")
+                }
                 Text("Connects with High Performance screen sharing.")
                 Text("Screen Sharing handles passwords and Keychain access.")
             }

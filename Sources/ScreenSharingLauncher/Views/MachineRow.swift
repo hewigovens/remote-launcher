@@ -16,8 +16,9 @@ struct MachineRow: View {
         HStack(spacing: 12) {
             Button(action: open) {
                 HStack(spacing: 12) {
-                    Image(systemName: "desktopcomputer")
+                    Image(systemName: machine.kind.symbolName)
                         .font(.system(size: 23)).foregroundStyle(.secondary).frame(width: 30)
+                        .help(machine.kind.title)
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(machine.name).fontWeight(.semibold).foregroundStyle(.primary)
@@ -67,7 +68,7 @@ struct MachineRow: View {
         }
         .padding(.vertical, 10)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(machine.name), \(machine.address), \(machine.virtualDisplays) \(machine.virtualDisplays == 1 ? "display" : "displays")")
+        .accessibilityLabel("\(machine.name), \(machine.kind.title), \(machine.address), \(machine.virtualDisplays) \(machine.virtualDisplays == 1 ? "display" : "displays")")
         .accessibilityValue(isOpening ? "Opening" : isOpen ? "Window open" : "Ready to connect")
         .accessibilityAction { if !isOpening { open() } }
         .accessibilityActions {

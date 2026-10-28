@@ -26,8 +26,18 @@ command-line tools. There are no third-party package dependencies.
 
 ## Build and run
 
+For a prebuilt Apple silicon app, download the ZIP from
+[GitHub Releases](https://github.com/hewigovens/remote-launcher/releases/latest),
+or install it with Homebrew:
+
 ```sh
-jj git clone --colocate git@github.com:hewigovens/remote-launcher.git
+brew install --cask hewigovens/tap/remote-launcher
+```
+
+To build from source:
+
+```sh
+jj git clone --colocate https://github.com/hewigovens/remote-launcher.git
 cd remote-launcher
 ./script/build_and_run.sh
 ```

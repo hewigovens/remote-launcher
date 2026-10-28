@@ -2,17 +2,15 @@
 
 # Remote Launcher
 
-A small native macOS launcher for your remote Macs. Open Apple's built-in Screen
-Sharing in High Performance mode, keep several Macs side by side, and click again
-to bring the same viewer forward—even after restarting the launcher.
+A native macOS launcher for High Performance Screen Sharing. Keep several remote
+Macs side by side, connect with one click, and bring the same viewer forward the
+next time—even after restarting the launcher.
 
-- A searchable machine list with one-click **Connect** and **Show** actions.
-- A separate Screen Sharing process for each Mac.
-- One or two virtual displays per connection.
-- Saved host names or IPv4/IPv6 addresses, optional usernames, and custom ports.
-- Hardware-specific icons detected over Bonjour, with a manual Mac type choice.
-- Dock reopening and a menu bar shortcut to the main window.
-- Local storage. Screen Sharing handles passwords and Keychain access.
+- Search your saved Macs and choose **Connect** or **Show**.
+- Request one or two virtual displays per connection.
+- Identify Macs with automatic hardware icons or a manual Mac type choice.
+- Open the machine list from the Dock or menu bar.
+- Keep settings locally while Screen Sharing handles passwords and Keychain access.
 
 ## Requirements
 
@@ -21,52 +19,46 @@ or Remote Management on each remote Mac and grant access to the account you use.
 The Macs must be able to communicate over UDP ports 5900–5902; a fast wired
 network is recommended. See [Apple's High Performance requirements](https://support.apple.com/guide/remote-desktop/use-high-performance-screen-sharing-apdf8e09f5a9/mac).
 
-Building from source also requires the Swift 6 toolchain and macOS developer
-command-line tools. There are no third-party package dependencies.
+## Installation
 
-## Build and run
-
-For a prebuilt Apple silicon app, download the ZIP from
-[GitHub Releases](https://github.com/hewigovens/remote-launcher/releases/latest),
-or install it with Homebrew:
+### Homebrew
 
 ```sh
 brew install --cask hewigovens/tap/remote-launcher
 ```
 
-To build from source:
+To update an existing installation:
 
 ```sh
-jj git clone --colocate https://github.com/hewigovens/remote-launcher.git
-cd remote-launcher
-./script/build_and_run.sh
+brew upgrade --cask hewigovens/tap/remote-launcher
 ```
 
-The script builds `dist/Remote Launcher.app`, generates its icon, signs it, and
-opens it. If exactly one valid Developer ID Application identity is available in
-Keychain, it uses Hardened Runtime and a secure timestamp. With no Developer ID
-identity, local builds use ad hoc signing. Select an identity explicitly when
-multiple certificates are available:
+### Download
 
-```sh
-SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)' ./script/build_and_run.sh
-```
+1. Download the Apple silicon ZIP from [GitHub Releases](https://github.com/hewigovens/remote-launcher/releases/latest).
+2. Extract the ZIP and move **Remote Launcher.app** to **Applications**.
+3. Open **Remote Launcher** from Applications.
 
-To force local ad hoc signing, use `SIGNING_IDENTITY=-`.
+The prebuilt release is Developer ID signed and notarized. To build from source,
+see [contribution.md](contribution.md#build-and-run).
 
-## Use it
+## Get started
 
-1. Choose **Add Mac**, then enter a name and host name or IP address. Enter the
-   port separately; omit `vnc://`. A username is optional.
+1. Choose **Add Mac** and enter a name and host name or IP address. Enter the
+   port separately and omit `vnc://`. A username is optional.
 2. Choose one or two virtual displays and save.
-3. Click the Mac's name or **Connect**. Authenticate in Screen Sharing when asked.
+3. Click the Mac's name or **Connect**, then authenticate in Screen Sharing.
 4. Click **Show** to bring an existing viewer forward. Use the row's **…** menu
    to edit or remove its saved entry.
 
-High Performance is always the launch default. The footer shows saved-machine
-and open-viewer counts; an open viewer does not guarantee an authenticated or
+High Performance is the launch default. The footer shows saved-machine and
+open-viewer counts; an open viewer does not guarantee an authenticated or
 streaming connection. Quitting the launcher or removing a saved entry leaves
 Screen Sharing running.
+
+Closing the main window keeps the launcher available in the Dock and menu bar.
+Click its Dock icon or choose **Open Remote Launcher** from its menu bar icon to
+show the machine list again.
 
 | Shortcut | Action |
 | --- | --- |
@@ -77,128 +69,38 @@ Screen Sharing running.
 
 Commands are also available in the File and Connection menus.
 
-Closing the main window keeps the launcher available in the Dock and menu bar.
-Click its Dock icon or choose **Open Remote Launcher** from its menu bar icon to
-show the machine list again. Repeated requests reuse the main window.
-
 ### Machine icons
 
-**Mac type: Automatic** uses Bonjour on the local network to learn the hardware
-model of a saved Mac and show a MacBook, Mac mini, Mac Studio, iMac, or Mac Pro
-icon. It matches resolved host addresses and ports, rather than guessing from
-the name. Last-known models are saved so icons remain available offline.
+**Mac type: Automatic** detects the hardware model of a saved Mac on the local
+network and shows a MacBook, Mac mini, Mac Studio, iMac, or Mac Pro icon.
+Last-known models are saved so icons remain available offline.
 
-Allow Local Network access if macOS requests it for discovery. Discovery does
-not require SSH, passwords, or an extra service on the remote Mac. If Bonjour is
-unavailable across a VPN/subnet, or a model is unknown, choose **Mac type** in the
-editor to set an icon manually. Automatic falls back to a generic Mac icon.
+Allow Local Network access if macOS requests it for automatic icons. Discovery
+requires no SSH or password. If discovery is unavailable across a VPN/subnet, or
+a model is unknown, choose **Mac type** in the editor to set an icon manually.
+Automatic falls back to a generic Mac icon.
 
-## How connections work
+## Local data
 
-The launcher creates a `.vncloc` document with
-`quality=high&numVirtualDisplays=1` (or `2`) and matching restoration attributes.
-Both query options are necessary to skip Screen Sharing's type chooser. It opens
-the document with `NSWorkspace.OpenConfiguration.createsNewApplicationInstance`,
-then records the viewer's process identity for reuse.
+Saved Macs, preferences, and viewer records are stored locally in:
 
-These connection-format options are **undocumented Apple behavior**, validated
-against Screen Sharing 7.0 (776.27) on macOS 27. Future macOS versions may require
-adjustments. No Apple binaries, private frameworks, or Apple preferences are
-modified or linked.
+```text
+~/Library/Application Support/dev.hewig.ScreenSharingLauncher/
+```
 
-The launcher checks the viewer's PID, start time, executable path, and TCP socket
-before reuse. If a viewer closes while its Connections manager stays open, the
-next click starts a fresh connection. Screen Sharing owns authentication,
-connection errors, and reconnecting disconnected sessions.
+Passwords are never stored by the launcher. Screen Sharing manages authentication
+and Keychain access. Invalid machine files are preserved and reported instead of
+being overwritten.
 
-Limitations:
+## Connection limits
 
 - Connections opened outside the launcher are not adopted.
 - Host aliases are separate endpoints; choose one canonical address per Mac.
 - Quit a Mac's viewer before reconnecting with changed connection settings.
-- This enables outgoing viewers to different Macs; it does not bypass the
-  remote Mac's limit on incoming High Performance sessions.
-- The app is currently unsandboxed and intended for Developer ID distribution.
-  A Mac App Store version requires a separate compatibility investigation.
+- Multiple outgoing viewers do not bypass a remote Mac's limit on incoming High
+  Performance sessions.
 
-## Local data
+## Contributing
 
-The app stores data in:
-
-```text
-~/Library/Application Support/dev.hewig.ScreenSharingLauncher/
-├── machines.json   # saved Macs and preferences
-├── sessions.json   # viewer process identities
-└── Connections/    # generated .vncloc documents
-```
-
-Passwords are never stored by the launcher. Invalid machine files are preserved
-and reported instead of being overwritten. The original bundle identifier and
-data directory are retained so existing installations keep their data.
-
-## Development
-
-```sh
-swift test
-./script/build_and_run.sh --verify
-```
-
-| Command | Purpose |
-| --- | --- |
-| `./script/build_and_run.sh --build-only` | Build, bundle, and sign without opening |
-| `./script/build_and_run.sh --debug` | Launch under LLDB; ad hoc signing by default |
-| `./script/build_and_run.sh --logs` | Run and stream process logs |
-| `./script/build_and_run.sh --telemetry` | Run and stream the app's local unified logs |
-
-The SwiftPM executable is `RemoteLauncher`; source and test modules retain the
-original `ScreenSharingLauncher` name. There is no Xcode project. The build
-script supplies the app bundle metadata and icon that `swift run` alone does not.
-See [AGENTS.md](AGENTS.md) for code ownership, behavior invariants, and verification.
-
-Tests cover validation and URL escaping, connection documents, concurrent clicks,
-viewer reuse and restart recovery, process/socket identity, partial failures,
-saved-list integrity, and persistence. Live video/audio and concurrent High
-Performance streams require remote Macs; unit tests cannot establish them.
-
-Hardware-model discovery has also been verified against two local Macs using
-Bonjour's `_rfb._tcp` service and `_device-info._tcp` TXT records. The model
-mapping follows Apple's identification pages for [Mac mini](https://support.apple.com/en-us/102852),
-[Mac Studio](https://support.apple.com/en-us/102231),
-[MacBook Pro](https://support.apple.com/en-us/108052),
-[MacBook Air](https://support.apple.com/en-us/102869),
-[iMac](https://support.apple.com/en-us/108054), and
-[Mac Pro](https://support.apple.com/en-us/102887).
-
-On macOS 27, two remote Macs were observed streaming simultaneously, and repeated
-clicks and launcher restarts reused the same viewer PIDs. The list, search,
-row/menu/keyboard actions, editor, and validation were manually checked. Audible
-output, HDR, two-display streaming, VoiceOver, dark appearance, and older macOS
-versions have not been manually verified.
-
-## Developer ID distribution
-
-Build an optimized, Developer ID-signed ZIP:
-
-```sh
-./script/package_release.sh
-```
-
-To submit to Apple's notary service, use a `notarytool` credential profile already
-stored in Keychain:
-
-```sh
-NOTARY_PROFILE=remote-launcher ./script/package_release.sh --notarize
-```
-
-The script validates signing, submits and downloads the notary log, staples and
-validates the ticket, checks Gatekeeper, then recreates the ZIP and its SHA-256.
-Artifacts and notarization responses are written to `dist/release/`. Distribution
-builds refuse ad hoc signatures. Keep signing private keys and credentials in
-Keychain; see [Apple's notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
-This workflow does not create a GitHub release or submit to the Mac App Store.
-
-## Icon
-
-The teal display and launch arrow were generated with ImageGen. The source
-[PNG](Resources/AppIcon.png) and [original prompt](Resources/AppIcon.prompt.txt)
-are included. The build script generates the standard and Retina `.icns` sizes.
+See [contribution.md](contribution.md) for source builds, tests, implementation
+notes, signing, packaging, and release verification.

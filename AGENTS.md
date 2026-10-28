@@ -1,7 +1,9 @@
 # Remote Launcher engineering guide
 
 Remote Launcher is a macOS SwiftUI app built with SwiftPM. Read [README.md](README.md)
-for usage, requirements, build options, distribution, and compatibility limits.
+for installation, usage, requirements, and connection limits. See
+[contribution.md](contribution.md) for builds, tests, implementation notes,
+signing, and distribution.
 There is no Xcode project or third-party package dependency.
 
 ## Commands
@@ -17,7 +19,8 @@ swift test
 The build script creates a real app bundle; `swift run` alone does not exercise
 bundle metadata, icons, signing, or normal app launching. It restarts only the
 launcher in run modes and leaves Screen Sharing viewers running. `--build-only`
-does not stop or launch applications. See the README for signing and debug modes.
+does not stop or launch applications. See [contribution.md](contribution.md#local-signing)
+for signing and debug modes.
 
 ## Ownership
 

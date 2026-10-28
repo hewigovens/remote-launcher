@@ -9,9 +9,26 @@ struct ContentView: View {
     @State private var editor: Machine?
     @State private var errorMessage: String?
 
-    private var selected: Machine? { store.machines.first { $0.id == selection } }
+    private var selected: Machine? { filtered.first { $0.id == selection } }
     private var filtered: [Machine] {
         store.machines.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) || $0.host.localizedCaseInsensitiveContains(search) }
+    }
+
+    private var actions: LauncherActions {
+        let machine = editor == nil ? selected : nil
+        return LauncherActions(
+            add: editor == nil && store.loadError == nil ? { add() } : nil,
+            open: machine.flatMap { machine in
+                connections.opening.contains(machine.endpointKey) ? nil : { open(machine) }
+            },
+            edit: machine.map { machine in { edit(machine) } },
+            remove: machine.map { machine in { remove(machine) } },
+            hasOpenWindow: machine.map { connections.sessions[$0.endpointKey] != nil } ?? false
+        )
+    }
+
+    private var windowCount: Int {
+        store.machines.filter { connections.sessions[$0.endpointKey] != nil }.count
     }
 
     var body: some View {
@@ -30,14 +47,19 @@ struct ContentView: View {
                 List(selection: $selection) {
                     ForEach(filtered) { machine in
                         MachineRow(machine: machine, isOpen: connections.sessions[machine.endpointKey] != nil,
-                                   isOpening: connections.opening.contains(machine.endpointKey)) {
+                                   isOpening: connections.opening.contains(machine.endpointKey), open: {
                             selection = machine.id
                             open(machine)
-                        }
+                        }, edit: { edit(machine) }, remove: { remove(machine) })
                         .tag(machine.id)
+                        .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                         .contextMenu {
-                            Button("Connect") { open(machine) }
-                            Button("Edit…") { editor = machine }
+                            Button(connections.sessions[machine.endpointKey] == nil ? "Connect" : "Show Window") {
+                                selection = machine.id
+                                open(machine)
+                            }
+                            .disabled(connections.opening.contains(machine.endpointKey))
+                            Button("Edit Mac…") { edit(machine) }
                             Divider()
                             Button("Remove from List", role: .destructive) { remove(machine) }
                         }
@@ -50,24 +72,25 @@ struct ContentView: View {
             }
             Divider()
             HStack {
-                Image(systemName: "bolt.fill").foregroundStyle(.secondary)
-                Text("High Performance by default").foregroundStyle(.secondary)
+                Text("\(search.isEmpty ? "" : "\(filtered.count) of ")\(store.machines.count) \(store.machines.count == 1 ? "Mac" : "Macs")")
                 Spacer()
-                Text("\(store.machines.count) \(store.machines.count == 1 ? "Mac" : "Macs")").foregroundStyle(.tertiary)
+                if windowCount > 0 {
+                    Text("\(windowCount) \(windowCount == 1 ? "window" : "windows") open")
+                }
             }
-            .font(.caption).padding(.horizontal, 20).padding(.vertical, 12)
+            .font(.caption).foregroundStyle(.secondary)
+            .padding(.horizontal, 20).padding(.vertical, 8)
         }
-        .frame(minWidth: 530, minHeight: 340)
+        .frame(minWidth: 520, minHeight: 280)
+        .focusedSceneValue(\.launcherActions, actions)
         .searchable(text: $search, prompt: "Find a Mac")
         .navigationTitle("Remote Launcher")
         .toolbar {
-            ToolbarItemGroup {
-                Button("Connect", systemImage: "arrow.up.right") { if let selected { open(selected) } }
-                    .disabled(selected == nil).keyboardShortcut(.return, modifiers: .command)
-                Button("Edit Mac", systemImage: "pencil") { editor = selected }
-                    .disabled(selected == nil).keyboardShortcut("i")
+            ToolbarItem {
                 Button("Add Mac", systemImage: "plus") { add() }
-                    .disabled(store.loadError != nil).keyboardShortcut("n")
+                    .labelStyle(.titleAndIcon)
+                    .disabled(store.loadError != nil || editor != nil)
+                    .help("Add a Mac (⌘N)")
             }
         }
         .sheet(item: $editor) { machine in
@@ -84,6 +107,10 @@ struct ContentView: View {
     }
 
     private func add() { editor = Machine(name: "", host: "") }
+    private func edit(_ machine: Machine) {
+        selection = machine.id
+        editor = machine
+    }
     private func open(_ machine: Machine) { Task { await connections.open(machine) } }
     private func remove(_ machine: Machine) {
         do {

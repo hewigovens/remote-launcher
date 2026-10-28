@@ -12,7 +12,9 @@ Requires macOS 14+, Apple silicon, and the Swift 6 toolchain. Both ends of a Hig
 
 The script builds and stages `dist/Remote Launcher.app`, signs it, and opens it. If exactly one valid Developer ID Application identity is in the Keychain, it uses that identity with Hardened Runtime and a secure timestamp. If no Developer ID identity is available, local builds fall back to ad hoc signing; multiple identities require an explicit selection. The Codex Run action uses the same script. Use `--build-only` to package without opening, or `--verify` to confirm the launcher process starts.
 
-Add a Mac with a name and host name/IP address, an optional username, and one or two virtual displays. Click its row to connect. Select a row and press Command-Return to connect, Command-I to edit, or Command-N to add another Mac. Right-click a row to remove it from the list. Removing a saved Mac or quitting the launcher leaves its Screen Sharing window running.
+Add a Mac with a name and host name/IP address, an optional username, and one or two virtual displays. Click its name or **Connect** to start a connection; **Show** brings an existing viewer forward. Use each row’s **…** menu to edit or remove the Mac. Select a row with the arrow keys and press Command-Return to connect or show its window, Command-I to edit, or Command-N to add another Mac. These actions are also available in the File and Connection menus. Removing a saved Mac or quitting the launcher leaves its Screen Sharing window running.
+
+High Performance remains the default connection mode. The compact footer shows the machine count and open viewer count; it does not claim that a remote session is authenticated or streaming.
 
 Screen Sharing handles authentication and Keychain passwords. This app stores no passwords. Machines, generated connection files, and process identities are saved locally in `~/Library/Application Support/dev.hewig.ScreenSharingLauncher/`.
 
@@ -48,7 +50,7 @@ The teal display and launch arrow are generated with built-in ImageGen. The sour
 - `NSWorkspace.OpenConfiguration.createsNewApplicationInstance` launches one viewer per endpoint. No Apple binaries, private frameworks, or Apple preferences are modified or linked.
 - While a launch is pending, further clicks do nothing. Afterwards, clicks activate the recorded process, with a standard PID-targeted reopen event if AppKit declines activation. The kernel's process ID, start time, and executable path are checked before reuse, including after restarting the launcher. This avoids AppKit's cached application state when multiple viewers share a bundle identifier.
 - A viewer's TCP connection is checked after a short startup grace period. If its screen window closes while the Connections manager stays open, the next click starts a fresh connection instead of focusing an idle manager.
-- The UI says **Show Window**, rather than claiming the remote connection is authenticated or live. Screen Sharing owns connection errors, authentication, and reconnecting a disconnected session. Quit that viewer to start a fresh connection with changed settings.
+- The UI offers **Show** when a viewer window is already open. Screen Sharing owns connection errors, authentication, and reconnecting a disconnected session. Quit that viewer to start a fresh connection with changed settings.
 - Connections opened outside the launcher are not adopted: Apple's app provides no supported session-discovery API. Host aliases are separate endpoints; use one canonical address for each Mac. Duplicate saved host/port pairs are rejected.
 - This workaround enables outgoing connections to different Macs. It does not remove Apple's limit on simultaneous High Performance sessions into the same host.
 
@@ -64,5 +66,7 @@ Tests cover URL validation/escaping, connection-file display settings, concurren
 On 2026-10-28, the app was built and its machine list and add/edit/remove flows inspected on macOS 27. Two remote Macs simultaneously started AVC video/audio streams and received their first video frames, with the sharing-type chooser skipped. Repeated clicks and restarting the launcher preserved the same two viewer PIDs. Audio stream startup was observed in logs; audible output, HDR, two virtual displays per host, and older client macOS versions were not tested.
 
 Developer ID distribution was also validated: the optimized app was accepted by Apple's notary service with no issues, stapled, and accepted by Gatekeeper. The app extracted from the final ZIP passed the same checks. All 11 tests passed in release mode, and the signed/notarized app reused both existing viewers, including the standard reopen-event fallback, without additional Hardened Runtime entitlements.
+
+The UI polish pass was checked in the running app: row actions, File/Connection menu commands, keyboard selection and editing, search with no results, initial editor focus, disabled empty submissions, and inline port validation. Both existing viewer PIDs were preserved. Dark appearance, VoiceOver, and older macOS versions were not manually tested in this pass.
 
 References: [Apple High Performance requirements](https://support.apple.com/guide/remote-desktop/use-high-performance-screen-sharing-apdf8e09f5a9/mac), [per-process limit analysis](https://edx.sh/posts/multiple-sessions-macos-high-performance-screen-sharing/), [NSWorkspace launch configuration](https://developer.apple.com/documentation/appkit/nsworkspace/openconfiguration).

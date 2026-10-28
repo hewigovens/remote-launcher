@@ -11,8 +11,8 @@ struct RemoteLauncherApp: App {
         WindowGroup("Remote Launcher", id: "machines") {
             ContentView(store: store, connections: connections)
         }
-        .defaultSize(width: 640, height: 460)
-        .commands { CommandGroup(replacing: .newItem) {} }
+        .defaultSize(width: 600, height: 360)
+        .commands { LauncherCommands() }
     }
 }
 

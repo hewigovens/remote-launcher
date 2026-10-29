@@ -21,7 +21,7 @@ struct RemoteLauncherApp: App {
         }
         .windowResizability(.contentSize)
 
-        MenuBarExtra("Remote Launcher", systemImage: "rectangle.connected.to.line.below", isInserted: $showInMenuBar) {
+        MenuBarExtra("Remote Launcher", systemImage: "display.2", isInserted: $showInMenuBar) {
             LauncherMenu(store: store, connections: connections)
         }
         .menuBarExtraStyle(.menu)

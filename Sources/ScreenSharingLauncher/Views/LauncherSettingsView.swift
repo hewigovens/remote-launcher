@@ -5,13 +5,11 @@ struct LauncherSettingsView: View {
 
     var body: some View {
         Form {
-            Section {
-                Toggle("Show in menu bar", isOn: $showInMenuBar)
-            } footer: {
-                Text("Connect to your saved Macs from the menu bar. You can always reopen Remote Launcher from the Dock.")
-            }
+            Toggle("Show in menu bar", isOn: $showInMenuBar)
+                .help("Connect to your saved Macs from the menu bar")
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: 160)
+        .scrollDisabled(true)
+        .frame(width: 420, height: 80)
     }
 }

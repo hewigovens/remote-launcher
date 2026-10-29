@@ -42,11 +42,13 @@ brew upgrade --cask hewigovens/tap/remote-launcher
 ## Get started
 
 1. Choose **Add Mac** and enter a name and host name or IP address. Enter the
-   port separately and omit `vnc://`. A username is optional.
+   port separately and omit `vnc://`. A username is optional. Link-local IPv6
+   addresses may include an interface, such as `fe80::1%en0`.
 2. Choose one or two virtual displays and save.
-3. Click the Mac's name or **Connect**, then authenticate in Screen Sharing.
-4. Click **Show** to bring an existing viewer forward. Use the row's **…** menu
-   to edit or remove its saved entry.
+3. Double-click the Mac or click **Connect**, then authenticate in Screen Sharing.
+4. Click **Show** to bring an existing viewer forward; its row says
+   **Window open**. Use the row's **…** menu or right-click it to edit or remove
+   its saved entry. **Edit > Undo** restores a removed Mac.
 
 High Performance is the launch default. The footer shows saved-machine and
 open-viewer counts; an open viewer does not guarantee an authenticated or
@@ -64,8 +66,9 @@ icon is hidden, and closing the main window leaves the app running.
 | --- | --- |
 | ⌘N | Add a Mac |
 | ↑ / ↓ | Select a Mac |
-| ⌘Return | Connect or show the selected Mac |
+| Return or ⌘Return | Connect or show the selected Mac |
 | ⌘I | Edit the selected Mac |
+| ⌘Z | Undo removing a Mac |
 
 Commands are also available in the File and Connection menus.
 

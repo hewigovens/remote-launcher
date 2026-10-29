@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(\.undoManager) private var undoManager
     let store: MachineStore
     @Bindable var connections: SessionCoordinator
     @State private var selection: Machine.ID?
@@ -23,18 +24,30 @@ struct ContentView: View {
             },
             edit: machine.map { machine in { edit(machine) } },
             remove: machine.map { machine in { remove(machine) } },
-            hasOpenWindow: machine.map { connections.sessions[$0.endpointKey] != nil } ?? false
+            hasOpenWindow: machine.map(isOpen) ?? false
         )
     }
 
+    private func isOpen(_ machine: Machine) -> Bool { connections.sessions[machine.endpointKey] != nil }
+    private func isOpening(_ machine: Machine) -> Bool { connections.opening.contains(machine.endpointKey) }
+    private func machine(for ids: Set<Machine.ID>) -> Machine? {
+        ids.count == 1 ? store.machines.first { ids.contains($0.id) } : nil
+    }
+
     private var windowCount: Int {
-        store.machines.filter { connections.sessions[$0.endpointKey] != nil }.count
+        store.machines.filter(isOpen).count
     }
 
     var body: some View {
         VStack(spacing: 0) {
             if let loadError = store.loadError {
-                ContentUnavailableView("Couldn’t Load Macs", systemImage: "exclamationmark.triangle", description: Text(loadError))
+                ContentUnavailableView {
+                    Label("Couldn’t Load Macs", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(loadError)
+                } actions: {
+                    Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([store.fileURL]) }
+                }
             } else if store.machines.isEmpty {
                 ContentUnavailableView {
                     Label("Your Macs, one click away", systemImage: "desktopcomputer")
@@ -46,36 +59,43 @@ struct ContentView: View {
             } else {
                 List(selection: $selection) {
                     ForEach(filtered) { machine in
-                        MachineRow(machine: machine, isOpen: connections.sessions[machine.endpointKey] != nil,
-                                   isOpening: connections.opening.contains(machine.endpointKey), open: {
+                        MachineRow(machine: machine, isSelected: selection == machine.id, isOpen: isOpen(machine), isOpening: isOpening(machine), open: {
                             selection = machine.id
                             open(machine)
                         }, edit: { edit(machine) }, remove: { remove(machine) })
                         .tag(machine.id)
                         .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
-                        .contextMenu {
-                            Button(connections.sessions[machine.endpointKey] == nil ? "Connect" : "Show Window") {
-                                selection = machine.id
-                                open(machine)
-                            }
-                            .disabled(connections.opening.contains(machine.endpointKey))
-                            Button("Edit Mac…") { edit(machine) }
-                            Divider()
-                            Button("Remove from List", role: .destructive) { remove(machine) }
-                        }
                     }
                 }
                 .listStyle(.inset)
+                // A click selects; double-click or Return connects.
+                .contextMenu(forSelectionType: Machine.ID.self) { ids in
+                    if let machine = machine(for: ids) {
+                        Button(isOpen(machine) ? "Show Window" : "Connect") { open(machine) }
+                            .disabled(isOpening(machine))
+                        Button("Edit Mac…") { edit(machine) }
+                        Divider()
+                        Button("Remove from List", role: .destructive) { remove(machine) }
+                    } else if ids.isEmpty {
+                        Button("Add Mac…") { add() }
+                    }
+                } primaryAction: { ids in
+                    if let machine = machine(for: ids), !isOpening(machine) { open(machine) }
+                }
                 .overlay {
                     if filtered.isEmpty { ContentUnavailableView.search(text: search) }
                 }
             }
             Divider()
             HStack {
-                Text("\(search.isEmpty ? "" : "\(filtered.count) of ")\(store.machines.count) \(store.machines.count == 1 ? "Mac" : "Macs")")
+                if search.isEmpty {
+                    Text("^[\(store.machines.count) Mac](inflect: true)")
+                } else {
+                    Text("\(filtered.count) of ^[\(store.machines.count) Mac](inflect: true)")
+                }
                 Spacer()
                 if windowCount > 0 {
-                    Text("\(windowCount) \(windowCount == 1 ? "window" : "windows") open")
+                    Text("^[\(windowCount) window](inflect: true) open")
                 }
             }
             .font(.caption).foregroundStyle(.secondary)
@@ -116,6 +136,19 @@ struct ContentView: View {
         do {
             try store.remove(machine.id)
             if selection == machine.id { selection = nil }
+            connections.removeDocuments(except: store.machines.map(\.id))
+            undoManager?.registerUndo(withTarget: store) { _ in restore(machine) }
+            undoManager?.setActionName("Remove “\(machine.name)”")
         } catch { errorMessage = error.localizedDescription }
+    }
+
+    /// Undoes a removal, registering the removal again as the redo action.
+    private func restore(_ machine: Machine) {
+        do {
+            try store.save(machine)
+            selection = machine.id
+            undoManager?.registerUndo(withTarget: store) { _ in remove(machine) }
+            undoManager?.setActionName("Remove “\(machine.name)”")
+        } catch { errorMessage = "Couldn’t restore \(machine.name). \(error.localizedDescription)" }
     }
 }

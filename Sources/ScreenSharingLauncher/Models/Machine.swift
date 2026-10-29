@@ -18,12 +18,20 @@ struct Machine: Identifiable, Codable, Equatable, Sendable {
         let server = host.contains(":") ? "[\(host)]" : host
         return port == 5900 ? server : "\(server):\(port)"
     }
+    var displayDescription: String {
+        String(AttributedString(localized: "^[\(virtualDisplays) display](inflect: true)").characters)
+    }
 
     var connectionURL: URL {
         get throws {
             var components = URLComponents()
             components.scheme = "vnc"
-            components.host = host.contains(":") ? "[\(host)]" : host
+            if host.contains(":") {
+                // Bracket IPv6 literals and encode a zone delimiter as %25 (RFC 6874).
+                components.percentEncodedHost = "[\(host.replacingOccurrences(of: "%", with: "%25"))]"
+            } else {
+                components.host = host
+            }
             components.port = port
             // Screen Sharing exports this query option in its own .vncloc URLs.
             components.queryItems = [
@@ -47,14 +55,22 @@ struct Machine: Identifiable, Codable, Equatable, Sendable {
         guard !result.name.isEmpty else { throw LauncherError("Enter a name for this Mac.") }
         guard !result.host.isEmpty,
               result.host.rangeOfCharacter(from: .whitespacesAndNewlines) == nil,
-              !result.host.contains(where: { "/?#@%\\".contains($0) }),
-              !result.host.contains("["), !result.host.contains("]") else {
+              !result.host.contains(where: { "/?#@\\[]".contains($0) }),
+              !result.host.contains("%") || result.host.contains(":") else {
             throw LauncherError("Enter a host name or IP address, without vnc:// or a port.")
         }
         guard (1...65535).contains(port) else { throw LauncherError("The port must be between 1 and 65535.") }
         if result.host.contains(":") {
+            // A link-local address may name its interface zone, such as fe80::1%en0 or fe80::1%4.
+            // Interface names start with a letter, which rejects an already-encoded %25en0.
+            let parts = result.host.split(separator: "%", maxSplits: 1, omittingEmptySubsequences: false)
+            let zone = parts.count == 2 ? parts[1] : nil
+            let zoneIsValid = zone.map { zone in
+                zone.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber) }
+                    && (zone.first?.isLetter == true || !zone.isEmpty && zone.allSatisfy(\.isNumber))
+            } ?? true
             var address = in6_addr()
-            guard inet_pton(AF_INET6, result.host, &address) == 1 else {
+            guard zoneIsValid, inet_pton(AF_INET6, String(parts[0]), &address) == 1 else {
                 throw LauncherError("Enter the host without a port; use the Port field below.")
             }
         }

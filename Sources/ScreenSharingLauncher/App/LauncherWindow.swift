@@ -18,6 +18,7 @@ struct LauncherWindow: View {
                     action(id: "machines", value: "main")
                     NSApp.activate(ignoringOtherApps: true)
                 }
+                if store.loadError == nil { connections.removeDocuments(except: store.machines.map(\.id)) }
                 discovery.start(store: store)
                 discovery.refresh()
             }

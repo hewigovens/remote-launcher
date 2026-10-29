@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import OSLog
 
 @MainActor @Observable
 final class SessionCoordinator {
@@ -8,6 +9,7 @@ final class SessionCoordinator {
     var errorMessage: String?
     private let client: any ScreenSharingClient
     private let files: LauncherFiles
+    private var documentsDirectory: URL { files.directory.appendingPathComponent("Connections", isDirectory: true) }
 
     init(client: any ScreenSharingClient = SystemScreenSharingClient(), files: LauncherFiles = .application) {
         self.client = client
@@ -31,7 +33,7 @@ final class SessionCoordinator {
                 return
             }
             sessions.removeValue(forKey: key)
-            let document = files.directory.appendingPathComponent("Connections/\(machine.id.uuidString).vncloc")
+            let document = documentsDirectory.appendingPathComponent("\(machine.id.uuidString).vncloc")
             try files.write(ConnectionDocument.data(for: machine), to: document)
             let record = try await client.launch(document: document, endpointKey: key)
             sessions[key] = record
@@ -49,6 +51,21 @@ final class SessionCoordinator {
         sessions = alive
         do { try persist() }
         catch { errorMessage = "Couldn’t save the Screen Sharing window list. \(error.localizedDescription)" }
+    }
+
+    /// Deletes connection documents, which contain the host and username, for Macs no
+    /// longer in the list. Open viewers keep running; each launch writes a fresh document.
+    func removeDocuments(except ids: [Machine.ID]) {
+        let keep = Set(ids.map { "\($0.uuidString).vncloc" })
+        // The folder does not exist until the first connection.
+        guard let names = try? FileManager.default.contentsOfDirectory(atPath: documentsDirectory.path) else { return }
+        for name in names where name.hasSuffix(".vncloc") && !keep.contains(name) {
+            do { try FileManager.default.removeItem(at: documentsDirectory.appendingPathComponent(name)) }
+            catch {
+                Logger(subsystem: "dev.hewig.ScreenSharingLauncher", category: "sessions")
+                    .error("Couldn’t delete a connection document: \(error.localizedDescription, privacy: .private)")
+            }
+        }
     }
 
     private func persist() throws {

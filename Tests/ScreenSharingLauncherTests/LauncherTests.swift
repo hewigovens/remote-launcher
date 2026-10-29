@@ -147,6 +147,38 @@ struct LauncherTests {
         #expect(throws: (any Error).self) { try Machine(name: "Invalid", host: "host", port: 0).validated() }
     }
 
+    @Test func linkLocalIPv6KeepsItsInterfaceZone() throws {
+        let machine = try Machine(name: "Link", host: "fe80::1%en0").validated()
+        let url = try machine.connectionURL
+        #expect(url.absoluteString == "vnc://[fe80::1%25en0]:5900?quality=high&numVirtualDisplays=1")
+        #expect(url.host(percentEncoded: false) == "fe80::1%en0")
+        for host in ["fe80::1%", "fe80::1%en0/1", "fe80::1%%en0", "fe80::1%25en0", "zz::1%en0"] {
+            #expect(throws: (any Error).self) { try Machine(name: "Invalid", host: host).validated() }
+        }
+    }
+
+    @Test func displayCountsUseInflectedPlurals() {
+        #expect(Machine(name: "One", host: "one.local").displayDescription == "1 display")
+        #expect(Machine(name: "Two", host: "two.local", virtualDisplays: 2).displayDescription == "2 displays")
+    }
+
+    @Test func removedMacsLoseTheirConnectionDocuments() async throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let client = FakeScreenSharingClient()
+        let coordinator = SessionCoordinator(client: client, files: fixture.files)
+        let kept = Machine(name: "One", host: "one.local")
+        await coordinator.open(kept)
+        await coordinator.open(Machine(name: "Two", host: "two.local"))
+        let other = fixture.files.directory.appendingPathComponent("Connections/notes.txt")
+        try fixture.files.write(Data(), to: other)
+        coordinator.removeDocuments(except: [kept.id])
+        let remaining = try FileManager.default.contentsOfDirectory(atPath: other.deletingLastPathComponent().path)
+        #expect(Set(remaining) == ["\(kept.id.uuidString).vncloc", "notes.txt"])
+        // Removing a document leaves its viewer tracked for reuse.
+        #expect(coordinator.sessions.count == 2)
+    }
+
     @Test func repeatedClicksReuseAndSeparateMachinesLaunchIndependently() async throws {
         let fixture = try Fixture()
         defer { fixture.remove() }

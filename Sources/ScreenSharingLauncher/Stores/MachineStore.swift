@@ -6,6 +6,7 @@ final class MachineStore {
     private(set) var machines: [Machine] = []
     private(set) var loadError: String?
     private let files: LauncherFiles
+    var fileURL: URL { files.directory.appendingPathComponent("machines.json") }
 
     init(files: LauncherFiles = .application) {
         self.files = files

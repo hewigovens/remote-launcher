@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MachineRow: View {
     let machine: Machine
+    let isSelected: Bool
     let isOpen: Bool
     let isOpening: Bool
     let open: () -> Void
@@ -12,33 +13,31 @@ struct MachineRow: View {
         isOpen ? "Show \(machine.name)’s existing Screen Sharing window" : "Connect to \(machine.name) with High Performance screen sharing"
     }
 
+    /// The accent color is invisible on a selected row's accent background.
+    private var openStyle: AnyShapeStyle {
+        isSelected ? AnyShapeStyle(.primary) : AnyShapeStyle(.tint)
+    }
+
     var body: some View {
         HStack(spacing: 12) {
-            Button(action: open) {
-                HStack(spacing: 12) {
-                    Image(systemName: machine.kind.symbolName)
-                        .font(.system(size: 23)).foregroundStyle(.secondary).frame(width: 30)
-                        .help(machine.kind.title)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(machine.name).fontWeight(.semibold).foregroundStyle(.primary)
-                            .lineLimit(1).help(machine.name)
-                        HStack(spacing: 6) {
-                            Text(machine.address).truncationMode(.middle).help(machine.address)
-                            Text("·").accessibilityHidden(true)
-                            Text("\(machine.virtualDisplays) \(machine.virtualDisplays == 1 ? "display" : "displays")")
-                                .fixedSize()
-                        }
-                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            Image(systemName: machine.kind.symbolName)
+                .font(.system(size: 23)).foregroundStyle(isOpen ? openStyle : AnyShapeStyle(.secondary)).frame(width: 30)
+                .help(machine.kind.title)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(machine.name).fontWeight(.semibold).foregroundStyle(.primary)
+                    .lineLimit(1).help(machine.name)
+                HStack(spacing: 6) {
+                    Text(machine.address).truncationMode(.middle).help(machine.address)
+                    Text("·")
+                    Text(machine.displayDescription).fixedSize()
+                    if isOpen {
+                        Text("·")
+                        Text("Window open").fontWeight(.medium).foregroundStyle(openStyle).fixedSize()
                     }
-                    Spacer(minLength: 0)
                 }
-                .contentShape(Rectangle())
+                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
-            .buttonStyle(.plain)
-            .disabled(isOpening)
-            .accessibilityLabel("\(machine.name), \(machine.address), \(machine.virtualDisplays) \(machine.virtualDisplays == 1 ? "display" : "displays")")
-            .accessibilityHint(openHelp)
+            Spacer(minLength: 0)
 
             Button(action: open) {
                 ZStack {
@@ -50,7 +49,6 @@ struct MachineRow: View {
             }
             .buttonStyle(.bordered)
             .disabled(isOpening)
-            .accessibilityLabel(isOpening ? "Opening \(machine.name)" : openHelp)
             .help(openHelp)
 
             Menu {
@@ -63,13 +61,15 @@ struct MachineRow: View {
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .fixedSize()
-            .accessibilityLabel("Actions for \(machine.name)")
             .help("Edit or remove \(machine.name)")
         }
         .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        // VoiceOver reads one element per row; its actions replace the hidden controls.
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(machine.name), \(machine.kind.title), \(machine.address), \(machine.virtualDisplays) \(machine.virtualDisplays == 1 ? "display" : "displays")")
+        .accessibilityLabel("\(machine.name), \(machine.kind.title), \(machine.address), \(machine.displayDescription)")
         .accessibilityValue(isOpening ? "Opening" : isOpen ? "Window open" : "Ready to connect")
+        .accessibilityHint(openHelp)
         .accessibilityAction { if !isOpening { open() } }
         .accessibilityActions {
             if !isOpening { Button(isOpen ? "Show Window" : "Connect", action: open) }

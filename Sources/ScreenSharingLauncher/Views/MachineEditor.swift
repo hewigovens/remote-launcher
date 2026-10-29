@@ -9,6 +9,10 @@ struct MachineEditor: View {
     @State private var portText = ""
     @FocusState private var nameFocused: Bool
 
+    private var automaticTitle: String {
+        machine.modelIdentifier.map { "Automatic (\(MachineKind(modelIdentifier: $0).title))" } ?? "Automatic"
+    }
+
     private var canSave: Bool {
         !machine.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !machine.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -20,17 +24,17 @@ struct MachineEditor: View {
             Form {
                 TextField("Name", text: $machine.name, prompt: Text("Office Mac"))
                     .focused($nameFocused)
-                Picker("Mac type", selection: $machine.kindOverride) {
-                    Text("Automatic").tag(nil as MachineKind?)
-                    ForEach(MachineKind.allCases) { kind in
-                        Label(kind.title, systemImage: kind.symbolName).tag(Optional(kind))
-                    }
-                }
-                .help("Detect the hardware model using Bonjour, or choose an icon manually")
                 TextField("Address", text: $machine.host, prompt: Text("mac-studio.local"))
                     .help("A host name, IPv4 address, or IPv6 address")
                 TextField("Username", text: $machine.username, prompt: Text("Ask when connecting"))
                 TextField("Port", text: $portText)
+                Picker("Mac type", selection: $machine.kindOverride) {
+                    Text(automaticTitle).tag(nil as MachineKind?)
+                    ForEach(MachineKind.allCases) { kind in
+                        Label(kind.title, systemImage: kind.symbolName).tag(Optional(kind))
+                    }
+                }
+                .help(machine.modelIdentifier.map { "Bonjour reported model \($0)" } ?? "Detect the hardware model using Bonjour, or choose an icon manually")
                 Picker("Displays", selection: $machine.virtualDisplays) {
                     Text("1 display").tag(1)
                     Text("2 displays").tag(2)
@@ -40,14 +44,9 @@ struct MachineEditor: View {
             }
             .formStyle(.columns)
             .textFieldStyle(.roundedBorder)
-            VStack(alignment: .leading, spacing: 4) {
-                if let model = machine.modelIdentifier {
-                    Text("Detected: \(MachineKind(modelIdentifier: model).title) (\(model))")
-                }
-                Text("Connects with High Performance screen sharing.")
-                Text("Screen Sharing handles passwords and Keychain access.")
-            }
-            .font(.caption).foregroundStyle(.secondary)
+            Text("Connects with High Performance screen sharing. Screen Sharing handles passwords and Keychain access.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             if let errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.circle.fill")
                     .font(.callout).foregroundStyle(.red).textSelection(.enabled)

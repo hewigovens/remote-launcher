@@ -3,7 +3,6 @@
 For installation and usage, see [README.md](README.md). Read [AGENTS.md](AGENTS.md)
 for code ownership, behavior invariants, verification expectations, and the JJ
 repository workflow.
-See [HANDOFF.md](HANDOFF.md) for the latest release handoff and remaining manual checks.
 
 ## Build and run
 
@@ -72,9 +71,8 @@ reopening was confirmed in the running app.
 
 The 0.1.0 release passed notarization, stapling, Gatekeeper assessment, a public
 ZIP download/checksum check, Homebrew's strict online cask audit, and installation.
-Audible output, HDR, two-display streaming, VoiceOver, dark appearance, and older
-macOS versions have not been manually verified. The menu bar UI was not automated
-in the last pass because native UI automation was unavailable.
+Dark appearance and the menu bar item were checked manually. Streaming, audio,
+and HDR belong to Screen Sharing.
 
 ## Connection implementation
 
@@ -139,7 +137,9 @@ NOTARY_PROFILE=remote-launcher ./script/package_release.sh --notarize
 
 The script validates signing, submits and downloads the notary log, staples and
 validates the ticket, checks Gatekeeper, then recreates the ZIP and its SHA-256.
-Artifacts and notarization responses are written to `dist/release/`. Distribution
+Artifacts and notarization responses are written to `dist/release/`. Keep a
+`dsymutil` symbol bundle of each published binary there for crash symbolication;
+`dist/` is not committed. Distribution
 builds refuse ad hoc signatures. See [Apple's notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
 
 Before publishing, extract the final ZIP and verify the extracted app's strict
@@ -152,7 +152,13 @@ release or submit to the Mac App Store.
 
 ## Icon assets
 
-The teal display and launch arrow were generated with ImageGen. The source
-[PNG](Resources/AppIcon.png) and [original prompt](Resources/AppIcon.prompt.txt)
-are included. The build script generates the standard and Retina `.icns` sizes
-from the PNG.
+[`script/render_icon.swift`](script/render_icon.swift) draws the app icon, a
+display in front of two glass panels for several remote Macs, with Core
+Graphics. Its palette constants are at the top of the file. Regenerate the
+committed [PNG](Resources/AppIcon.png) after changing it:
+
+```sh
+swift script/render_icon.swift Resources/AppIcon.png
+```
+
+The build script generates the standard and Retina `.icns` sizes from the PNG.

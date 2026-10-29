@@ -5,7 +5,6 @@ for installation, usage, requirements, and connection limits. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for builds, tests, implementation notes,
 signing, and distribution.
 There is no Xcode project or third-party package dependency.
-See [HANDOFF.md](HANDOFF.md) for the current release snapshot and remaining manual checks.
 
 ## Commands
 

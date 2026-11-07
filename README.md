@@ -58,9 +58,10 @@ Screen Sharing running.
 The menu bar lists your saved Macs. Select a Mac to connect or bring its existing
 viewer forward, or choose **Open Remote Launcher** to show the main window.
 
-Open **Remote Launcher > Settings…** (⌘,) to turn **Show in menu bar** on or off.
-Your choice is saved between launches. The Dock stays available when the menu bar
-icon is hidden, and closing the main window leaves the app running.
+Open **Remote Launcher > Settings…** (⌘,) to turn **Show in Dock** or
+**Show in menu bar** on or off; one of them always stays on. The menu bar item
+also has a **Show in Dock** switch. Your choices are saved between launches.
+Closing the main window leaves the app running.
 
 | Shortcut | Action |
 | --- | --- |

@@ -17,6 +17,12 @@ struct LauncherTests {
         #expect(requests == 2)
     }
 
+    @Test func hidingBothEntryPointsKeepsTheDock() {
+        #expect(LauncherPreferences.activationPolicy(showInDock: true, showInMenuBar: true) == .regular)
+        #expect(LauncherPreferences.activationPolicy(showInDock: false, showInMenuBar: true) == .accessory)
+        #expect(LauncherPreferences.activationPolicy(showInDock: false, showInMenuBar: false) == .regular)
+    }
+
     @Test func machineIconsMigrateOldFilesAndRespectOverrides() throws {
         let data = Data("""
         [{"id":"00000000-0000-0000-0000-000000000001","name":"Office","host":"office.local","username":"","port":5900,"virtualDisplays":1}]

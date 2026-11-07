@@ -4,6 +4,7 @@ import SwiftUI
 struct LauncherMenu: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings
+    @AppStorage(LauncherPreferences.showInDockKey) private var showInDock = true
     let store: MachineStore
     let connections: SessionCoordinator
 
@@ -31,6 +32,9 @@ struct LauncherMenu: View {
             }
         }
         Divider()
+        Toggle(isOn: $showInDock) {
+            Label("Show in Dock", systemImage: "dock.rectangle")
+        }
         Button("Open Remote Launcher", systemImage: "macwindow", action: showLauncher)
         Button("Settings…", systemImage: "gearshape") {
             NSApp.activate(ignoringOtherApps: true)

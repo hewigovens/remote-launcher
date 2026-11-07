@@ -66,8 +66,9 @@ The executable is `RemoteLauncher`; the original Swift module name remains
 - Reopen the main window through SwiftUI's scene action with the fixed `main`
   presentation value, from both the Dock and menu bar. A closed window may have
   been released; enumerating `NSApp.windows` cannot recreate it. Keep the Dock
-  available when the main window closes, and keep menu bar visibility bound to
-  the persistent `showInMenuBar` preference (on by default). Settings must remain
+  available when the main window closes. Bind Dock and menu bar visibility to
+  the persistent `showInDock` and `showInMenuBar` preferences (both on by
+  default), and never hide both. Settings must remain
   reachable through the app menu when the menu bar item is hidden.
 - Menu bar machines share `MachineStore` and `SessionCoordinator` with the main
   window. Reuse the same connection path and opening guard. Bring connection

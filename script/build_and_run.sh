@@ -73,6 +73,8 @@ if [[ ! -f "$ICON_OUTPUT" || "$ICON_SOURCE" -nt "$ICON_OUTPUT" ]]; then
   done
   iconutil -c icns "$ICONSET" -o "$ICON_OUTPUT"
 fi
+# LSUIElement keeps LaunchServices from promoting a hidden-Dock launcher to a regular app
+# on reopen; the app shows its Dock icon itself when the preference allows.
 cat >"$APP_BUNDLE/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -87,6 +89,7 @@ cat >"$APP_BUNDLE/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>6</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSMultipleInstancesProhibited</key><true/>
+  <key>LSUIElement</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
   <key>NSLocalNetworkUsageDescription</key><string>Find your saved Macs on the local network to show their hardware icons.</string>
   <key>NSBonjourServices</key><array>

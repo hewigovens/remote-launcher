@@ -68,8 +68,11 @@ The executable is `RemoteLauncher`; the original Swift module name remains
   been released; enumerating `NSApp.windows` cannot recreate it. Keep the Dock
   available when the main window closes. Bind Dock and menu bar visibility to
   the persistent `showInDock` and `showInMenuBar` preferences (both on by
-  default), and never hide both. Settings must remain
-  reachable through the app menu when the menu bar item is hidden.
+  default), and never hide both. Settings must remain reachable through the app
+  menu when the menu bar item is hidden. The bundle declares `LSUIElement` and
+  becomes a regular app at launch when the Dock icon is shown; without it,
+  reopening a hidden-Dock launcher from behind another app leaves its window
+  in the back.
 - Menu bar machines share `MachineStore` and `SessionCoordinator` with the main
   window. Reuse the same connection path and opening guard. Bring connection
   errors back to the main window when a menu action fails while it is closed.
